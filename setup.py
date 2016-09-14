@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
 import sys
 
 from setuptools import setup
@@ -24,7 +23,9 @@ readme = open('README.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 requirements = [
-    # TODO: put package requirements here
+    'pysd',
+    'tornado',
+    'sqlalchemy'
 ]
 
 test_requirements = [
@@ -40,7 +41,8 @@ test_requirements = [
 setup(
     name='checks',
     version='0.0.1',
-    description='Checks Service Executin Environemnt: executes consistency checks and other types of checks on a FA database',
+    description='Checks Service Executin Environemnt: executes consistency ' +
+                'checks and other types of checks on a FA database',
     long_description=readme + '\n\n' + history,
     author='Giuseppe Acito',
     author_email='giuseppe.acito@gmail.com',
@@ -60,13 +62,13 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.5',
     ],
     cmdclass={'test': PyTest},
     test_suite='tests',
-    tests_require=test_requirements
+    tests_require=test_requirements,
+    dependency_links=[
+        'https://github.com/giupo/pysd/tarball/master#egg=pysd-0.0.9'
+    ]
 )

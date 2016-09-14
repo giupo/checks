@@ -31,7 +31,7 @@ def have(result, number):
 def compute_stub():
     pass
 
-    
+
 def factorial(number):
     """Computes the factorial"""
     number = int(number)
