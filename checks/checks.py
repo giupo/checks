@@ -3,6 +3,7 @@
 import os
 import logging
 import json
+import datetime
 
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, DateTime
@@ -36,43 +37,36 @@ class SQLAlchemyDictMixin(object):
         return ret
 
 
+def get_created_value(context):
+    """gets 'created' value from current context"""
+    return context.current_parameters.get('created')
+
+
+def datetime_default():
+    return datetime.datetime.utcnow()
+
+
 class Check(Base, JsonMixin, SQLAlchemyDictMixin):
     "Stores Checks data in the DB"
     __tablename__ = 'checks'
     id = Column(Integer, primary_key=True)
 
-    name = Column(String, unique=True)
-    """unique name of the check"""
-
-    formula = Column(Text, nullable=False)
-    """formula to be executed"""
-
-    expected = Column(String, nullable=True)
-    """
-    variable name to be present in formula after its execution
-    if null, use eval instead of exec
-    """
-
-    operator = Column(String, nullable=False)
-    """Comparision opeartor used against benchmark"""
-
-    benchmark = Column(Float, nullable=False, default=0.0)
-    """a number used as a benchmark for comparision with the opeartor"""
-
-    created = Column(DateTime, nullable=False)
+    _name = Column("name", String, unique=True)
+    _formula = Column("formula", Text, nullable=False)
+    _expected = Column("expected", String, nullable=True)
+    _operator = Column("operator", String, nullable=False)
+    _benchmark = Column("benchmark", Float, nullable=False,
+                        default=0.0)
+    created = Column("created", DateTime, nullable=False,
+                     default=datetime_default())
     """When this Check has been created"""
 
-    updated = Column(DateTime)
-    """When this Check has been updated"""
+    _updated = Column("updated", DateTime, nullable=False,
+                      default=get_created_value)
+    _author = Column("author", String, nullable=False)
 
-    author = Column(String, nullable=False)
-    """Author of the check"""
-
-    note = Column(Text, default="")
-    """Additional descriptive notes of the check"""
-
-    tag = Column(String, nullable=False)
-    """Tag to group the check"""
+    _note = Column("note", Text, default="")
+    _tag = Column("tag", String, nullable=False)
 
     def __repr__(self):
         return "<Check(id=%s, name=%s, %s %s %s)>" % (
@@ -81,6 +75,98 @@ class Check(Base, JsonMixin, SQLAlchemyDictMixin):
             self.formula,
             self.operator,
             self.benchmark)
+
+    @property
+    def name(self):
+        """unique name of the check"""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._updated = datetime.datetime.utcnow()
+        self._name = name
+
+    @property
+    def formula(self):
+        """formula to be executed"""
+        return self._formula
+
+    @formula.setter
+    def formula(self, formula):
+        self._updated = datetime_default()
+        self._formula = formula
+
+    @property
+    def expected(self):
+        """
+        variable name to be present in formula after its execution
+        if null, use eval instead of exec
+        """
+        return self._expected
+
+    @expected.setter
+    def expected(self, expected):
+        self._updated = datetime_default()
+        self._expected = expected
+
+    @property
+    def operator(self):
+        """Comparision opeartor used against benchmark"""
+        return self._operator
+
+    @operator.setter
+    def operator(self, operator):
+        self._updated = datetime_default()
+        self._operator = operator
+
+    @property
+    def benchmark(self):
+        """a number used as a benchmark for comparision with the opeartor"""
+        return self._benchmark
+
+    @benchmark.setter
+    def benchmark(self, benchmark):
+        self._updated = datetime_default()
+        self._benchmark = benchmark
+
+    @property
+    def updated(self):
+        """When this Check has been updated"""
+        return self._updated
+
+    @updated.setter
+    def updated(self, updated):
+        self._updated = updated
+
+    @property
+    def author(self):
+        """Author of the check"""
+        return self._author
+
+    @author.setter
+    def author(self, author):
+        self._updated = datetime_default()
+        self._author = author
+
+    @property
+    def note(self):
+        """Additional descriptive notes of the check"""
+        return self._note
+
+    @note.setter
+    def note(self, note):
+        self._updated = datetime_default()
+        self._note = note
+
+    @property
+    def tag(self):
+        """Tag to group the check"""
+        return self._tag
+
+    @tag.setter
+    def tag(self, tag):
+        self._updated = datetime_default()
+        self._tag = tag
 
 
 class Result(Base, JsonMixin, SQLAlchemyDictMixin):

@@ -50,8 +50,9 @@ setup(
     packages=[
         'checks',
     ],
-    package_dir={'checks':
-                 'checks'},
+    package_dir={
+        'checks': 'checks'
+    },
     include_package_data=True,
     install_requires=requirements,
     license="BSD",
@@ -69,6 +70,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     dependency_links=[
-        'https://github.com/giupo/pysd/tarball/master#egg=pysd-0.0.9'
+        'https://github.com/giupo/pysd/tarball/master#egg=pysd-0.1.0'
     ]
 )

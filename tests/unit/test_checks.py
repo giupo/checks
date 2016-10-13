@@ -8,20 +8,30 @@ test_checks
 Tests for `checks` module.
 """
 
-import unittest
-from checks import checks
+from checks.checks import Check
 
 
-class TestChecks(unittest.TestCase):
+def test_updated_in_checks():
+    x = Check()
+    x.name = 'name'
+    old = x.updated
 
-    def setUp(self):
-        pass
+    x.author = 'me'
+    assert x.updated > old
+    old = x.updated
 
-    def test_something(self):
-        pass
+    x.tag = 'dataid'
+    assert x.updated > old
+    old = x.updated
 
-    def tearDown(self):
-        pass
+    x.formula = 'A+B'
+    assert x.updated > old
+    old = x.updated
 
-if __name__ == '__main__':
-    unittest.main()
+    x.benchmark = 0.1
+    assert x.updated > old
+    old = x.updated
+    x.operator = '<'
+
+    assert x.updated > old
+    assert x.created is None

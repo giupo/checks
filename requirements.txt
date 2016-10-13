@@ -1,7 +1,8 @@
 apipkg==1.4
 argh==0.26.2
-## !! Could not determine repository location
-checks==0.0.1
+backports-abc==0.4
+certifi==2016.8.31
+-e git+https://github.com/giupo/checks.git@2aee0afc054411c4d3a8ae6eabd45b2774ed884f#egg=checks
 colorama==0.3.7
 coverage==4.2
 detox==0.10.0
@@ -19,6 +20,8 @@ parse-type==0.3.4
 pathtools==0.1.2
 pluggy==0.3.1
 py==1.4.31
+pycrypto==2.6.1
+pysd==0.1.0
 pytest==3.0.1
 pytest-bdd==2.17.1
 pytest-cov==2.3.1
@@ -26,8 +29,10 @@ pytest-notifier==0.3
 pytest-watch==4.1.0
 pytest-xdist==1.15.0
 PyYAML==3.12
+singledispatch==3.4.0.3
 six==1.10.0
 SQLAlchemy==1.0.14
+tornado==4.4.1
 tox==2.3.1
 virtualenv==15.0.3
 watchdog==0.8.3
