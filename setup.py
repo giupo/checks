@@ -40,14 +40,14 @@ test_requirements = [
 
 setup(
     name='checks',
-    version='0.0.2',
+    version='0.0.3',
     description='Checks Service Executin Environemnt: executes consistency ' +
                 'checks and other types of checks on a FA database',
     long_description=readme + '\n\n' + history,
     author='Giuseppe Acito',
     author_email='giuseppe.acito@gmail.com',
     url='https://github.com/giupo/checks',
-    packages=find_packages('checks', excludes='tests')
+    packages=find_packages('checks', excludes='tests'),
     include_package_data=True,
     install_requires=requirements,
     license="BSD",
