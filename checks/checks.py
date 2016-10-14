@@ -5,6 +5,8 @@ import logging
 import json
 import datetime
 
+from contextlib import contextmanager
+
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy import Text, Float, Boolean, ForeignKey
@@ -17,6 +19,20 @@ DB_URL = os.environ.get('DATABASE_URL', 'sqlite://')
 engine = create_engine(DB_URL, echo=log.level < logging.INFO)
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
+
+
+@contextmanager
+def session_scope():
+    """Provide a transactional scope around a series of operations."""
+    session = Session()
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 class JsonMixin(object):
@@ -179,12 +195,7 @@ class Result(Base, JsonMixin, SQLAlchemyDictMixin):
     of the check
     """
 
-    compliant = Column(Boolean, nullable=False)
-    """
-     it's `True` if the application of the Check.operator against
-     `Check.benchmark` is always `True`
-    """
-
+    _compliant = Column("compliant", Boolean, nullable=False)
     tag = Column(String, nullable=False)
     """tag to group results"""
 
@@ -199,5 +210,15 @@ class Result(Base, JsonMixin, SQLAlchemyDictMixin):
             self.id,
             self.compliant,
             self.check_id)
+
+    @property
+    def compliant(self):
+        """
+        it's `True` if the application of the Check.operator against
+        `Check.benchmark` is always `True`
+        """
+        if self.results is None:
+            return False
+
 
 Base.metadata.create_all(engine)

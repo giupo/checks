@@ -3,7 +3,7 @@
 
 import sys
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
 
@@ -47,12 +47,7 @@ setup(
     author='Giuseppe Acito',
     author_email='giuseppe.acito@gmail.com',
     url='https://github.com/giupo/checks',
-    packages=[
-        'checks',
-    ],
-    package_dir={
-        'checks': 'checks'
-    },
+    packages=find_packages('checks', excludes='tests')
     include_package_data=True,
     install_requires=requirements,
     license="BSD",
