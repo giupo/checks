@@ -64,6 +64,12 @@ setup(
     cmdclass={'test': PyTest},
     test_suite='tests',
     tests_require=test_requirements,
+    entry_points={
+        'console_scripts': [
+            'checks=checks.app:main'
+        ]
+    },
+
     dependency_links=[
         'https://github.com/giupo/pysd/tarball/master#egg=pysd-0.1.0'
     ]

@@ -2,6 +2,8 @@
 
 import logging
 
+from socket import gethostname
+
 from tornado.options import parse_command_line, options, define
 
 try:
@@ -20,11 +22,22 @@ def makeDefaultConfig():
     parse_command_line()
     config = ConfigParser()
     config.add_section('WebServer')
+    config.set('WebServer', 'protocol', 'http')
+    config.set('WebServer', 'address', gethostname())
+    config.set('WebServer', 'port', str(9100))
+    config.set('WebServer', 'nproc', str(1))
+    config.set('WebServer', 'servicename', 'CheckService')
 
     for key, value in options.items():
         config.set('WebServer', str(key), str(value))
 
     return config
+
+
+def update_config():
+    """updates the config (when it will be available as a Service)"""
+    global config
+    pass
 
 config = makeDefaultConfig()
 
