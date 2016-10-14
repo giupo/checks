@@ -5,7 +5,7 @@ import logging
 from tornado.options import parse_command_line, options, define
 
 try:
-    from configParser import ConfigParser
+    from ConfigParser import ConfigParser
 except ImportError:
     from configparser import ConfigParser
 
@@ -22,8 +22,12 @@ def makeDefaultConfig():
     config.add_section('WebServer')
 
     for key, value in options.items():
-        config.set('WebServer', key, value)
+        config.set('WebServer', str(key), str(value))
 
     return config
 
 config = makeDefaultConfig()
+
+for section in config.sections():
+    for key, value in config.items(section):
+        log.info("[%s] %s = %s", section, key, value)
