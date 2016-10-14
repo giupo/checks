@@ -47,7 +47,7 @@ setup(
     author='Giuseppe Acito',
     author_email='giuseppe.acito@gmail.com',
     url='https://github.com/giupo/checks',
-    packages=find_packages('checks', excludes='tests'),
+    packages=find_packages('checks', exclude='tests/**'),
     include_package_data=True,
     install_requires=requirements,
     license="BSD",
