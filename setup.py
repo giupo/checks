@@ -40,7 +40,7 @@ test_requirements = [
 
 setup(
     name='checks',
-    version='0.0.2',
+    version='0.0.3',
     description='Checks Service Executin Environemnt: executes consistency ' +
                 'checks and other types of checks on a FA database',
     long_description=readme + '\n\n' + history,
