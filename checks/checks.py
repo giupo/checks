@@ -36,14 +36,15 @@ def session_scope():
 
 
 class JsonMixin(object):
-    "Converts to JSON, given the object has a to_dict method"
+    """Converts to JSON, given the object has a to_dict method"""
     def to_json(self):
         return json.dumps(self.to_dict())
 
 
 class SQLAlchemyDictMixin(object):
-    """Converts a Row object to a plain dict based only
-       on the columns definitions
+    """
+    Converts a Row object to a plain dict based only
+    on the columns definitions
     """
     def to_dict(self):
         ret = {}
