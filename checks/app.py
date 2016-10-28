@@ -1,4 +1,4 @@
-# -*- coding;utf-8 -*-
+# -*- coding:utf-8 -*-
 
 import os
 import json
@@ -84,9 +84,6 @@ def on_shutdown():
 
 
 def startWebServer():
-    global addr
-    global port
-
     server = tornado.httpserver.HTTPServer(application)
     protocol = config.get('WebServer', 'protocol')
     addr = config.get('WebServer', 'address')
