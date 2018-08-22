@@ -10,11 +10,11 @@ import tornado.ioloop
 import tornado.options
 import tornado.httpserver
 
-from pysd.discovery import Service
+from ServiceDiscovery.discovery import Service
 
 from checks import Check, session_scope
 from config import config
-
+from ServiceDiscovery.app import ConfigHandler
 log = logging.getLogger(__name__)
 
 
@@ -62,6 +62,7 @@ class CheckHandler(tornado.web.RequestHandler):
 
 routes = []
 routes.extend(CheckHandler.routes())
+routes.extend(ConfigHandler.routes())
 
 settings = {
     "cookie_secret": os.environ.get('SECRET') or 'secret',
@@ -92,7 +93,7 @@ def startWebServer():
 
     while True:
         try:
-            log.info('try %s', port)
+            log.info('try port %s', port)
             server.bind(port)
             log.info("%s at %s://%s:%s", service_name, protocol, addr, port)
             config.set('WebServer', 'port', str(port))

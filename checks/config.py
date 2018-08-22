@@ -13,8 +13,8 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-
-define("nproc", default=1, type=int, help="Numero processi")
+if 'nproc' not in options:
+    define("nproc", default=1, type=int, help="Numero processi")
 
 
 def makeDefaultConfig():
@@ -38,6 +38,7 @@ def update_config():
     """updates the config (when it will be available as a Service)"""
     global config
     pass
+
 
 config = makeDefaultConfig()
 
