@@ -23,7 +23,7 @@ readme = open('README.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 requirements = [
-    'pysd',
+    'ServiceDiscovery',
     'tornado',
     'sqlalchemy'
 ]
@@ -40,14 +40,14 @@ test_requirements = [
 
 setup(
     name='checks',
-    version='0.0.3',
+    version='0.0.7',
     description='Checks Service Executin Environemnt: executes consistency ' +
                 'checks and other types of checks on a FA database',
     long_description=readme + '\n\n' + history,
     author='Giuseppe Acito',
     author_email='giuseppe.acito@gmail.com',
     url='https://github.com/giupo/checks',
-    packages=find_packages('checks', excludes='tests')
+    packages=find_packages('checks', exclude='tests/**'),
     include_package_data=True,
     install_requires=requirements,
     license="BSD",
@@ -64,6 +64,12 @@ setup(
     cmdclass={'test': PyTest},
     test_suite='tests',
     tests_require=test_requirements,
+    entry_points={
+        'console_scripts': [
+            'checks=checks.app:main'
+        ]
+    },
+
     dependency_links=[
         'https://github.com/giupo/pysd/tarball/master#egg=pysd-0.1.0'
     ]
