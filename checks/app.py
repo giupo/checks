@@ -1,69 +1,35 @@
 # -*- coding:utf-8 -*-
 
 import os
-import json
 import logging
 
 import tornado.web
 import tornado.ioloop
 import tornado.options
 import tornado.httpserver
+import tornado.gen
+
+from motor import MotorClient
 
 from ServiceDiscovery.discovery import ServiceDiscovery, Service
 from signal import signal, SIGINT, SIGTERM, SIGQUIT
 
-from checks.checks import Check, session_scope
 from checks.config import make_config
-from ServiceDiscovery.app import ConfigHandler
+from checks.controllers import CheckHandler, NotFoundHandler
+from checks.controllers import BulkHandler, CsvBulkHandler
+
+from ServiceDiscovery.controllers import HealthHandler
+
 log = logging.getLogger(__name__)
-
-
-class CheckHandler(tornado.web.RequestHandler):
-    """Handles all the HTTP traffic (mainly CRUD) for Checks"""
-
-    @classmethod
-    def routes(cls):
-        return [
-            (r'/checks/(.*)', cls),
-            (r'/checks/', cls),
-            (r'/checks', cls)
-        ]
-
-    def set_default_headers(self):
-        # this is a JSON RESTful API
-        self.set_header('Content-Type', 'application/json')
-
-    def get(self, id=None):
-        with session_scope() as session:
-            if id is None:
-                # get all the checks
-                result = [x.to_dict() for x in session.query(Check).all()]
-            else:
-                if id.isdigit():
-                    result = session.query(Check).filter(id=id).first()
-                else:
-                    result = session.query(Check).filter(name=id).first()
-
-                if result is not None:
-                    result = result.to_dict()
-                else:
-                    raise tornado.web.HTTPError(404)
-
-            self.finish(json.dumps(result))
-
-    def post(self):
-        with session_scope() as session:
-            check = Check(**self.arguments)
-            session.add(check)
-            session.commit()
-            self.set_status(201)
-            self.finish(check.to_json())
 
 
 def build_routes():
     routes = []
     routes.extend(CheckHandler.routes())
-    routes.extend(ConfigHandler.routes())
+    routes.extend(CheckHandler.routes())
+    routes.extend(HealthHandler.routes())
+    routes.extend(CsvBulkHandler.routes())
+    routes.extend(BulkHandler.routes())
     return routes
 
 
@@ -73,23 +39,30 @@ def get_app():
     settings = {
         "cookie_secret": os.environ.get('SECRET') or 'secret',
         "xsrf_cookies": False,
-        "debug": config.getboolean('WebServer', 'debug')
+        "debug": config.getboolean('WebServer', 'debug'),
+        'default_handler_class': NotFoundHandler
     }
 
     app = tornado.web.Application(build_routes(), **settings)
     app.config = config
+
+    mongodb_host = app.config.get('MongoDB', 'host')
+    mongodb_port = app.config.get('MongoDB', 'port')
+    app.db = MotorClient('mongodb://%s:%s' % (mongodb_host, mongodb_port))    
     app.sd = ServiceDiscovery(endpoint=config.get('ServiceDiscovery', 'sd'))
     return app
 
 
 def on_shutdown(app):
     """shutdown callback"""
-    global checkService
     log.info("Shutdown started")
-    try:
-        app.sd.unregister(app.service)
-    except Exception as e:
-        log.error("Cannot de-register on Consul: %s", str(e))
+    if app.service.registered:
+        try:
+            app.sd.unregister(app.service)
+        except Exception as e:
+            log.error("Cannot de-register on Consul: %s", str(e))
+
+    app.db.close()
     tornado.ioloop.IOLoop.instance().stop()
     log.info("Shutdown completed")
 
@@ -129,19 +102,33 @@ def startWebServer():
     app.service = Service(service_name, addr, port)
     try:
         app.sd.register(app.service)
+        app.service.registered = True
     except Exception as e:
-        log.error("Cannot register on service on Consul: %s", str(e))
-        
-    server.start(app.config.getint('WebServer', 'nproc'))
-    ioloop = tornado.ioloop.IOLoop.instance()
+        log.error("Cannot register the service on Consul: %s", str(e))
+        app.service.registered = False
 
+    server.start(app.config.getint('WebServer', 'nproc'))
+    
+    mongodb_host = app.config.get('MongoDB', 'host')
+    mongodb_port = app.config.get('MongoDB', 'port')
+    app.db = MotorClient('mongodb://%s:%s' % (mongodb_host, mongodb_port))    
+    app.sd = ServiceDiscovery(endpoint=app.config.get('ServiceDiscovery', 'sd'))
+
+    ioloop = tornado.ioloop.IOLoop.instance()
+    
     def callback_for_signal(sig, frame):
         ioloop.add_callback_from_signal(on_shutdown, app)
     
     for sig in (SIGINT, SIGTERM, SIGQUIT):
         signal(sig, callback_for_signal)
 
-    log.info("%s started and registered (PID: %s)", service_name, os.getpid())
+    if app.service.registered:
+        log.info("%s started and registered (PID: %s)",
+                 service_name, os.getpid())
+    else:
+        log.info("%s started but *not* registered (PID: %s)",
+                 service_name, os.getpid())
+
     ioloop.start()
 
 
@@ -150,5 +137,5 @@ def main():
     startWebServer()
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
     main()

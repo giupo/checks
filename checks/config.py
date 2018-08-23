@@ -14,9 +14,11 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-DEFAULT_KEY_PATH='server.key'
-DEFAULT_CERT_PATH='server.crt'
-DEFAULT_SD='http://localhost:8500'
+DEFAULT_KEY_PATH = 'server.key'
+DEFAULT_CERT_PATH = 'server.crt'
+DEFAULT_SD = 'http://localhost:8500'
+DEFAULT_MONGODB_HOST = 'localhost'
+DEFAULT_MONGODB_PORT = '27017'
 
 if 'nproc' not in options:
     define("nproc", default=1, type=int, help="Numero processi")
@@ -37,7 +39,15 @@ if 'sd' not in options:
     define('sd', default=DEFAULT_SD, type=str,
            help='URL for Consul')
 
+if 'mongodb-host' not in options:
+    define('mongodb-host', default=DEFAULT_MONGODB_HOST,
+           help='host of mongodb')
 
+if 'mongodb-port' not in options:
+    define('mongodb-port', default=DEFAULT_MONGODB_PORT,
+           help='port of mongodb')
+
+           
 def make_config():
     """init the config object"""
     config = ConfigParser()
@@ -50,6 +60,9 @@ def make_config():
     config.set('WebServer', 'servicename', 'CheckService')
     config.set('WebServer', 'certfile', options.certfile)
     config.set('WebServer', 'keyfile', options.keyfile)
+    config.add_section('MongoDB')
+    config.set('MongoDB', 'host', options['mongodb_host'])
+    config.set('MongoDB', 'port', options['mongodb-port'])
     config.add_section('ServiceDiscovery')
     config.set('ServiceDiscovery', 'sd', options.sd)
     for key, value in options.items():

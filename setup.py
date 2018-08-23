@@ -25,7 +25,7 @@ history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 requirements = [
     'ServiceDiscovery',
     'tornado',
-    'sqlalchemy'
+    'motor'
 ]
 
 test_requirements = [
