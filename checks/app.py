@@ -2,7 +2,6 @@
 
 import os
 import json
-import signal
 import logging
 
 import tornado.web
@@ -10,10 +9,11 @@ import tornado.ioloop
 import tornado.options
 import tornado.httpserver
 
-from ServiceDiscovery.discovery import Service
+from ServiceDiscovery.discovery import ServiceDiscovery, Service
+from signal import signal, SIGINT, SIGTERM, SIGQUIT
 
-from checks import Check, session_scope
-from config import config
+from checks.checks import Check, session_scope
+from checks.config import make_config
 from ServiceDiscovery.app import ConfigHandler
 log = logging.getLogger(__name__)
 
@@ -60,74 +60,95 @@ class CheckHandler(tornado.web.RequestHandler):
             self.finish(check.to_json())
 
 
-routes = []
-routes.extend(CheckHandler.routes())
-routes.extend(ConfigHandler.routes())
-
-settings = {
-    "cookie_secret": os.environ.get('SECRET') or 'secret',
-    "xsrf_cookies": False
-}
-
-application = tornado.web.Application(routes, **settings)
-checkService = None
+def build_routes():
+    routes = []
+    routes.extend(CheckHandler.routes())
+    routes.extend(ConfigHandler.routes())
+    return routes
 
 
-def on_shutdown():
+def get_app():
+    """Factory for torando.web.Application"""
+    config = make_config()
+    settings = {
+        "cookie_secret": os.environ.get('SECRET') or 'secret',
+        "xsrf_cookies": False,
+        "debug": config.getboolean('WebServer', 'debug')
+    }
+
+    app = tornado.web.Application(build_routes(), **settings)
+    app.config = config
+    app.sd = ServiceDiscovery(endpoint=config.get('ServiceDiscovery', 'sd'))
+    return app
+
+
+def on_shutdown(app):
     """shutdown callback"""
     global checkService
     log.info("Shutdown started")
-    if checkService:
-        checkService.unregister()
-
+    try:
+        app.sd.unregister(app.service)
+    except Exception as e:
+        log.error("Cannot de-register on Consul: %s", str(e))
     tornado.ioloop.IOLoop.instance().stop()
     log.info("Shutdown completed")
 
 
 def startWebServer():
-    server = tornado.httpserver.HTTPServer(application)
-    protocol = config.get('WebServer', 'protocol')
-    addr = config.get('WebServer', 'address')
-    port = config.getint('WebServer', 'port')
-    service_name = config.get('WebServer', 'servicename')
+    app = get_app()
+    server = tornado.httpserver.HTTPServer(app)
+   
+    protocol = app.config.get('WebServer', 'protocol')
+    addr = app.config.get('WebServer', 'address')
+    port = app.config.getint('WebServer', 'port')
+    service_name = app.config.get('WebServer', 'servicename')
 
+    ssl_options = None
+    if "https" == protocol:
+        ssl_options = {
+            "certfile": app.config.get('WebServer', 'servercert'),
+            "keyfile": app.config.get('WebServer', 'keyfile')
+        }
+        log.info("Good body, you have HTTPS configured")
+    else:
+        log.warning("Server should be always on HTTPS!")
+
+    server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
+    
     while True:
         try:
             log.info('try port %s', port)
             server.bind(port)
             log.info("%s at %s://%s:%s", service_name, protocol, addr, port)
-            config.set('WebServer', 'port', str(port))
+            app.config.set('WebServer', 'port', str(port))
             break
         except Exception as e:
             log.info('port %s already used (%s) ... ', str(port), str(e))
             port += 1
 
-    checkService = Service(service_name, "%s://%s:%s" % (
-        protocol,
-        addr,
-        port
-    ))
-
-    server.start(config.getint('WebServer', 'nproc'))
+    app.service = Service(service_name, addr, port)
+    try:
+        app.sd.register(app.service)
+    except Exception as e:
+        log.error("Cannot register on service on Consul: %s", str(e))
+        
+    server.start(app.config.getint('WebServer', 'nproc'))
     ioloop = tornado.ioloop.IOLoop.instance()
-    checkService.register()
 
-    signal.signal(signal.SIGINT,
-                  lambda sig, frame:
-                  ioloop.add_callback_from_signal(on_shutdown))
-    signal.signal(signal.SIGTERM,
-                  lambda sig, frame:
-                  ioloop.add_callback_from_signal(on_shutdown))
-    signal.signal(signal.SIGQUIT,
-                  lambda sig, frame:
-                  ioloop.add_callback_from_signal(on_shutdown))
+    def callback_for_signal(sig, frame):
+        ioloop.add_callback_from_signal(on_shutdown, app)
+    
+    for sig in (SIGINT, SIGTERM, SIGQUIT):
+        signal(sig, callback_for_signal)
 
     log.info("%s started and registered (PID: %s)", service_name, os.getpid())
     ioloop.start()
 
 
 def main():
+    tornado.options.parse_command_line()
     startWebServer()
+
 
 if __name__ == '__main__':
     main()
