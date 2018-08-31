@@ -47,7 +47,13 @@ if 'mongodb-port' not in options:
     define('mongodb-port', default=DEFAULT_MONGODB_PORT,
            help='port of mongodb')
 
-           
+if 'mongodb-user' not in options:
+    define('mongodb-user', default='')
+
+if 'mongodb-pass' not in options:
+    define('mongodb-pass', default='')
+
+
 def make_config():
     """init the config object"""
     config = ConfigParser()
@@ -61,15 +67,17 @@ def make_config():
     config.set('WebServer', 'certfile', options.certfile)
     config.set('WebServer', 'keyfile', options.keyfile)
     config.add_section('MongoDB')
-    config.set('MongoDB', 'host', options['mongodb_host'])
+    config.set('MongoDB', 'host', options['mongodb-host'])
     config.set('MongoDB', 'port', options['mongodb-port'])
+    config.set('MongoDB', 'user', options['mongodb-user'])
+    config.set('MongoDB', 'pass', options['mongodb-pass'])
     config.add_section('ServiceDiscovery')
     config.set('ServiceDiscovery', 'sd', options.sd)
     for key, value in options.items():
         config.set('WebServer', str(key), str(value))
 
     for section in config.sections():
-        for key,value in config.items(section):
+        for key, value in config.items(section):
             log.info("[%s] %s = %s", section, key, value)
-        
+
     return config

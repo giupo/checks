@@ -7,31 +7,22 @@ test_checks
 
 Tests for `checks` module.
 """
+import json
+from tornado.testing import AsyncHTTPTestCase
+import checks.app
 
-from checks.checks import Check
 
+class TestChecksApp(AsyncHTTPTestCase):
 
-def test_updated_in_checks():
-    x = Check()
-    x.name = 'name'
-    old = x.updated
+    def get_app(self):
+        self.app = checks.app.get_app()
+        return self.app
 
-    x.author = 'me'
-    assert x.updated > old
-    old = x.updated
+    def test_homepage(self):
+        response = self.fetch('/checks')
+        self.assertEqual(response.code, 200)
+        self.assertEqual(json.loads(response.body), [])
 
-    x.tag = 'dataid'
-    assert x.updated > old
-    old = x.updated
-
-    x.formula = 'A+B'
-    assert x.updated > old
-    old = x.updated
-
-    x.benchmark = 0.1
-    assert x.updated > old
-    old = x.updated
-    x.operator = '<'
-
-    assert x.updated > old
-    assert x.created is None
+    def tearDown(self):
+        super(AsyncHTTPTestCase, self).tearDown()
+        self.app.db.close()

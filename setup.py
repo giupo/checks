@@ -25,7 +25,9 @@ history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 requirements = [
     'ServiceDiscovery',
     'tornado',
-    'motor'
+    'motor',
+    'numpy',
+    'pycurl'
 ]
 
 test_requirements = [

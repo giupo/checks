@@ -15,8 +15,11 @@ from ServiceDiscovery.discovery import ServiceDiscovery, Service
 from signal import signal, SIGINT, SIGTERM, SIGQUIT
 
 from checks.config import make_config
+
 from checks.controllers import CheckHandler, NotFoundHandler
 from checks.controllers import BulkHandler, CsvBulkHandler
+from checks.controllers import GroupChecksHandler, CheckExecHandler
+from checks.controllers import GroupChecksExecController
 
 from ServiceDiscovery.controllers import HealthHandler
 
@@ -25,16 +28,19 @@ log = logging.getLogger(__name__)
 
 def build_routes():
     routes = []
+    routes.extend(GroupChecksExecController.routes())
+    routes.extend(CheckExecHandler.routes())
     routes.extend(CheckHandler.routes())
-    routes.extend(CheckHandler.routes())
-    routes.extend(HealthHandler.routes())
+    routes.extend(GroupChecksHandler.routes())
     routes.extend(CsvBulkHandler.routes())
     routes.extend(BulkHandler.routes())
+    routes.extend(HealthHandler.routes())
+
     return routes
 
 
 def get_app():
-    """Factory for torando.web.Application"""
+    """Factory for tornado.web.Application"""
     config = make_config()
     settings = {
         "cookie_secret": os.environ.get('SECRET') or 'secret',
@@ -48,7 +54,7 @@ def get_app():
 
     mongodb_host = app.config.get('MongoDB', 'host')
     mongodb_port = app.config.get('MongoDB', 'port')
-    app.db = MotorClient('mongodb://%s:%s' % (mongodb_host, mongodb_port))    
+    app.db = MotorClient('mongodb://%s:%s' % (mongodb_host, mongodb_port))
     app.sd = ServiceDiscovery(endpoint=config.get('ServiceDiscovery', 'sd'))
     return app
 
@@ -70,7 +76,7 @@ def on_shutdown(app):
 def startWebServer():
     app = get_app()
     server = tornado.httpserver.HTTPServer(app)
-   
+
     protocol = app.config.get('WebServer', 'protocol')
     addr = app.config.get('WebServer', 'address')
     port = app.config.getint('WebServer', 'port')
@@ -87,7 +93,7 @@ def startWebServer():
         log.warning("Server should be always on HTTPS!")
 
     server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
-    
+
     while True:
         try:
             log.info('try port %s', port)
@@ -108,17 +114,18 @@ def startWebServer():
         app.service.registered = False
 
     server.start(app.config.getint('WebServer', 'nproc'))
-    
+
     mongodb_host = app.config.get('MongoDB', 'host')
     mongodb_port = app.config.get('MongoDB', 'port')
-    app.db = MotorClient('mongodb://%s:%s' % (mongodb_host, mongodb_port))    
-    app.sd = ServiceDiscovery(endpoint=app.config.get('ServiceDiscovery', 'sd'))
+    app.db = MotorClient('mongodb://%s:%s' % (mongodb_host, mongodb_port))
+    app.sd = ServiceDiscovery(
+        endpoint=app.config.get('ServiceDiscovery', 'sd'))
 
     ioloop = tornado.ioloop.IOLoop.instance()
-    
+
     def callback_for_signal(sig, frame):
         ioloop.add_callback_from_signal(on_shutdown, app)
-    
+
     for sig in (SIGINT, SIGTERM, SIGQUIT):
         signal(sig, callback_for_signal)
 
@@ -137,5 +144,5 @@ def main():
     startWebServer()
 
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     main()
