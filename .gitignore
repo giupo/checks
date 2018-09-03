@@ -45,3 +45,4 @@ docs/_build
 
 # no .cache, please
 .cache
+.pytest_cache
