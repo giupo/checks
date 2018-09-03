@@ -47,11 +47,8 @@ if 'mongodb-port' not in options:
     define('mongodb-port', default=DEFAULT_MONGODB_PORT,
            help='port of mongodb')
 
-if 'mongodb-user' not in options:
-    define('mongodb-user', default='')
-
-if 'mongodb-pass' not in options:
-    define('mongodb-pass', default='')
+if 'mongodb-url' not in options:
+    define('mongodb-url', default='')
 
 
 def make_config():
@@ -69,8 +66,7 @@ def make_config():
     config.add_section('MongoDB')
     config.set('MongoDB', 'host', options['mongodb-host'])
     config.set('MongoDB', 'port', options['mongodb-port'])
-    config.set('MongoDB', 'user', options['mongodb-user'])
-    config.set('MongoDB', 'pass', options['mongodb-pass'])
+    config.set('MongoDB', 'url', options['mongodb-url'])
     config.add_section('ServiceDiscovery')
     config.set('ServiceDiscovery', 'sd', options.sd)
     for key, value in options.items():

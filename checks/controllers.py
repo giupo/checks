@@ -315,7 +315,7 @@ class CheckExecHandler(tornado.web.RequestHandler):
         res = yield http_client.fetch(url, validate_cert=False)
         check = loads(res.body)
 
-        if res.status_code == 404:
+        if res.code == 404:
             setError(self, error="Check not found %s/%s" % (group, name))
             return
 
@@ -329,16 +329,31 @@ class CheckExecHandler(tornado.web.RequestHandler):
         deps = {}
 
         for dep_name in deps_name:
+            dataurl = sd.getService("DataService") + "/data"
             url = dataurl + "/" + tag + "/" + dep_name
-            log.debug(url)
-            res = yield http_client.fetch(url, validate_cert=False)
+            log.debug("URL to call for deps: %s", url)
+            res = yield http_client.fetch(url, validate_cert=False,
+                                          raise_error=False)
             if res.code == 404:
-                setError(self,
-                         error="Deps %s for check %s/%s not found" %
-                         (dep_name, group, name))
-                return
+                log.warn("Deps %s for check %s/%s not found",
+                         dep_name, group, name)
+                url = dataurl + "/" + tag + "/ZERIQ"
+                res = yield http_client.fetch(url, validate_cert=False,
+                                              raise_error=False)
+                if res.code == 404:
+                    setError(self,
+                             error="Couldn't load ZERIQ after deps unmatched",
+                             code=500)
+                    return
 
             deps[dep_name] = loads(res.body)
+
+            if 'formula' in deps[dep_name]:
+                # questo sta qui solo per ovviare problemi di codec
+                # sul fronte EvalService.
+                #
+                # vanno corretti i dati ed i vari codec delle stringhe
+                del deps[dep_name]['formula']
 
         # see exes params in exes/consts.py
         body = {
@@ -350,17 +365,17 @@ class CheckExecHandler(tornado.web.RequestHandler):
         res = yield http_client.fetch(execurl,
                                       method='POST',
                                       body=dumps(body),
-                                      verify=False)
+                                      validate_cert=False,
+                                      raise_error=False)
 
         if res.code < 200 or res.code > 299:
             setError(self, error="Error connecting to EvalService: %s" %
                      res.body, code=res.code)
             return
 
-        log.debug("res: %s", res)
-
         res = loads(res.body)
-        dataresult = res['name']['numbers']
+        log.debug("Res: %s", res)
+        dataresult = res[check['name']]['numbers']
         threshold = check['threshold']
         operator = check['operator']
 
@@ -416,8 +431,11 @@ class GroupChecksExecController(tornado.web.RequestHandler):
         checks = loads(res.body)
         ret = {}
         for check in checks:
+            checkurl = sd.getService("CheckService") + "/checks"
             exec_url = '/'.join([checkurl, group, check['name'], 'exec', tag])
-            res = yield http_client.fetch(exec_url, validate_cert=False)
+            res = yield http_client.fetch(exec_url,
+                                          validate_cert=False,
+                                          raise_error=False)
             ret[check['name']] = loads(res.body)
 
         self.finish(dumps(ret))

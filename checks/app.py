@@ -73,6 +73,21 @@ def on_shutdown(app):
     log.info("Shutdown completed")
 
 
+def build_ssl_options(config):
+    ssl_options = {
+        "certfile": config.get('WebServer', 'servercert'),
+        "keyfile": config.get('WebServer', 'serverkey')
+    }
+
+    if os.path.isfile(ssl_options['certfile']) and \
+       os.path.isfile(ssl_options['keyfile']):
+        return ssl_options
+    else:
+        return None
+
+    return ssl_options
+
+
 def startWebServer():
     app = get_app()
     server = tornado.httpserver.HTTPServer(app)
@@ -82,15 +97,15 @@ def startWebServer():
     port = app.config.getint('WebServer', 'port')
     service_name = app.config.get('WebServer', 'servicename')
 
-    ssl_options = None
-    if "https" == protocol:
-        ssl_options = {
-            "certfile": app.config.get('WebServer', 'servercert'),
-            "keyfile": app.config.get('WebServer', 'keyfile')
-        }
-        log.info("Good body, you have HTTPS configured")
-    else:
+    ssl_options = build_ssl_options(app.config)
+    if ssl_options is None:
+        protocol = "http"
         log.warning("Server should be always on HTTPS!")
+    else:
+        protocol = "https"
+        log.info("Good body, you have HTTPS configured")
+
+    app.config.set('WebServer', 'protocol', protocol)
 
     server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
 
@@ -117,7 +132,13 @@ def startWebServer():
 
     mongodb_host = app.config.get('MongoDB', 'host')
     mongodb_port = app.config.get('MongoDB', 'port')
-    app.db = MotorClient('mongodb://%s:%s' % (mongodb_host, mongodb_port))
+    mongodb_url = app.config.get('MongoDB', 'url')
+
+    if mongodb_url != '':
+        app.db = MotorClient(mongodb_url)
+    else:
+        app.db = MotorClient('mongodb://%s:%s' % (mongodb_host, mongodb_port))
+
     app.sd = ServiceDiscovery(
         endpoint=app.config.get('ServiceDiscovery', 'sd'))
 
